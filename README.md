@@ -9,7 +9,7 @@ This repo fixes that for dispatch-time subcommand routing. Skills declare which 
 
 **Scope: dispatch-time subcommand triggers only.** If you know at invocation time which subcommand is being called, this handles it deterministically. Mid-execution references that depend on runtime state (e.g. failure routing after agents report back) are out of scope — the hook fires before execution begins.
 
-> Uses existing Agent Skills conventions (`scripts/`, `references/`, `metadata:`). No spec changes required. Reference implementation for Claude Code (`UserPromptSubmit`) and Gemini CLI (`beforeAgent`).
+> Uses existing Agent Skills conventions (`scripts/`, `references/`, `metadata:`). No spec changes required. Reference implementation for Claude Code (`UserPromptSubmit`) and Gemini CLI (`BeforeAgent`).
 
 ## How it works
 
@@ -49,7 +49,7 @@ triggers:
 - Multiple matches -> all matching references injected (concatenated)
 - No match -> no injection, zero overhead
 
-**Subcommand-anchored patterns only.** Pre-invocation hooks (`UserPromptSubmit` in Claude Code, `beforeAgent` in Gemini CLI) fire after skill body expansion — the full `SKILL.md` content is in the prompt, not just what the user typed. Keyword triggers like `failure|blocked` match against the skill's own instructions and fire on every invocation. Use patterns anchored to the invocation prefix (e.g. `^/saw program`, `^/saw amend`) that cannot appear in the skill body. Mid-execution references that depend on runtime state (failure routing, post-merge integration) should stay convention-based — hooks fire too early for them.
+**Subcommand-anchored patterns only.** Pre-invocation hooks (`UserPromptSubmit` in Claude Code, `BeforeAgent` in Gemini CLI) fire after skill body expansion — the full `SKILL.md` content is in the prompt, not just what the user typed. Keyword triggers like `failure|blocked` match against the skill's own instructions and fire on every invocation. Use patterns anchored to the invocation prefix (e.g. `^/saw program`, `^/saw amend`) that cannot appear in the skill body. Mid-execution references that depend on runtime state (failure routing, post-merge integration) should stay convention-based — hooks fire too early for them.
 
 ## Installation
 
@@ -106,7 +106,7 @@ All three layers are active simultaneously:
 | Layer | Mechanism | Platform | Enforcement |
 |-------|-----------|----------|-------------|
 | Hook | `UserPromptSubmit` | Claude Code | Deterministic (pre-model) |
-| Hook | `beforeAgent` | Gemini CLI | Deterministic (pre-model) |
+| Hook | `BeforeAgent` | Gemini CLI | Deterministic (pre-model) |
 | Script | `scripts/inject-context` | Any agent with Bash | Model-initiated |
 | Fallback | Routing table in SKILL.md | Any agent | Convention-based |
 
