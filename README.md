@@ -5,6 +5,8 @@
 
 Context injection for [Agent Skills](https://agentskills.io) progressive disclosure. Automatically loads reference files into model context based on trigger patterns declared in skill frontmatter.
 
+> Built on the [Agent Skills](https://agentskills.io) open standard. Uses only existing spec conventions (`scripts/`, `references/`, `metadata:` extension point) — no spec modifications required. Compatible with Claude Code, Cursor, GitHub Copilot, and other Agent Skills-compatible tools.
+
 ## The Problem
 
 The [Agent Skills spec](https://agentskills.io/specification#progressive-disclosure) defines three-tier progressive disclosure:
