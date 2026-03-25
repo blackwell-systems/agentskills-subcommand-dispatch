@@ -1,4 +1,4 @@
-# agentskills-context-injection
+# agentskills-subcommand-dispatch
 
 [![Blackwell Systems™](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems)
 [![Agent Skills](assets/badge-agentskills.svg)](https://agentskills.io)
@@ -22,7 +22,7 @@ bash scripts/inject-context "/saw program execute add caching"
 # outputs contents of references/program-flow.md
 ```
 
-One line in `SKILL.md`: "run `scripts/inject-context` with the user's prompt before proceeding." Simpler than a routing table, harder to skip.
+One line in `SKILL.md`: "run `scripts/inject-context` with the user's prompt before proceeding." The model still decides what string to pass — this is model-initiated, not enforced. But it is simpler than a routing table and harder to accidentally skip.
 
 **Layer 2 -- Hook (Claude Code).** A `UserPromptSubmit` hook runs the same script before the model sees the prompt. No model decision. The reference is in context when the model starts. Deterministic.
 
@@ -37,8 +37,8 @@ description: Does things
 triggers:
   - match: "^/my-skill subcommand"
     inject: references/subcommand-flow.md
-  - match: "error|failed|blocked"
-    inject: references/troubleshooting.md
+  - match: "^/my-skill other-subcommand"
+    inject: references/other-flow.md
 ---
 ```
 
@@ -47,7 +47,7 @@ triggers:
 - Multiple matches -> all matching references injected (concatenated)
 - No match -> no injection, zero overhead
 
-**Important: dispatch-time triggers only.** The Claude Code `UserPromptSubmit` hook receives the prompt *after* skill body expansion -- the full `SKILL.md` content is in the prompt, not just what the user typed. This means keyword triggers like `failure|blocked` will match against the skill's own instructions and fire on every invocation. Use anchored patterns that can't appear in the skill body (e.g. `^/saw program`, `^/saw amend`). Mid-execution references that depend on runtime state (like failure routing after agents report back) should stay convention-based -- the hook fires too early for them.
+**Subcommand-anchored patterns only.** Pre-invocation hooks (`UserPromptSubmit` in Claude Code, `beforeAgent` in Gemini CLI) fire after skill body expansion — the full `SKILL.md` content is in the prompt, not just what the user typed. Keyword triggers like `failure|blocked` match against the skill's own instructions and fire on every invocation. Use patterns anchored to the invocation prefix (e.g. `^/saw program`, `^/saw amend`) that cannot appear in the skill body. Mid-execution references that depend on runtime state (failure routing, post-merge integration) should stay convention-based — hooks fire too early for them.
 
 ## Installation
 
@@ -101,9 +101,10 @@ The hook iterates all skill directories (`~/.claude/skills/`, `~/.agents/skills/
 
 All three layers are active simultaneously:
 
-| Layer | Mechanism | Vendor-neutral | Enforcement |
-|-------|-----------|----------------|-------------|
-| Hook | `UserPromptSubmit` | Claude Code only | Deterministic (pre-model) |
+| Layer | Mechanism | Platform | Enforcement |
+|-------|-----------|----------|-------------|
+| Hook | `UserPromptSubmit` | Claude Code | Deterministic (pre-model) |
+| Hook | `beforeAgent` | Gemini CLI | Deterministic (pre-model) |
 | Script | `scripts/inject-context` | Any agent with Bash | Model-initiated |
 | Fallback | Routing table in SKILL.md | Any agent | Convention-based |
 
