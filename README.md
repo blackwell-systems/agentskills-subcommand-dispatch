@@ -3,47 +3,28 @@
 [![Blackwell Systems™](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems)
 [![Agent Skills](assets/badge-agentskills.svg)](https://agentskills.io)
 
-Context injection for [Agent Skills](https://agentskills.io) progressive disclosure. Automatically loads reference files into model context based on trigger patterns declared in skill frontmatter.
+The [Agent Skills](https://agentskills.io) spec tells skills to put reference material in `references/` and let the model load it "when needed." In practice, the model forgets, loads the wrong file, or loads everything upfront. There's no enforcement.
 
-> Built on the [Agent Skills](https://agentskills.io) open standard. Uses only existing spec conventions (`scripts/`, `references/`, `metadata:` extension point) — no spec modifications required. Compatible with Claude Code, Cursor, GitHub Copilot, and other Agent Skills-compatible tools.
+This repo fixes that. Skills declare which references to load for which prompts, and a script handles the rest.
 
-## The Problem
+> Uses existing Agent Skills conventions (`scripts/`, `references/`, `metadata:`). No spec changes. Works with Claude Code, Cursor, GitHub Copilot, and anything else that supports the spec.
 
-The [Agent Skills spec](https://agentskills.io/specification#progressive-disclosure) defines three-tier progressive disclosure:
+## How it works
 
-1. **Metadata** (~100 tokens) -- loaded at startup
-2. **Instructions** (<5000 tokens) -- loaded on skill activation
-3. **Resources** (as needed) -- loaded when instructions reference them
+Skills add `triggers:` to their YAML frontmatter. Each trigger maps a regex to a reference file. When the user's prompt matches, the reference loads automatically.
 
-Tier 3 (Resources) loading is convention-based -- the model decides when to read reference files. It can ignore routing tables, pre-load everything, or load references at the wrong time. There is no enforcement.
+Two layers, same trigger definitions:
 
-## The Solution
-
-Two layers of context injection using the spec's existing conventions (`scripts/`, `references/`, `metadata:` extension point). No spec modifications required.
-
-### Layer 1: Injection Script (vendor-neutral)
-
-A `scripts/inject-context` script bundled with each skill. Works on **any** Agent Skills-compliant client that can execute Bash.
+**Layer 1 -- Script (any agent).** A `scripts/inject-context` script ships with the skill. The model runs it before executing:
 
 ```bash
-# Model runs this before executing the skill
 bash scripts/inject-context "/saw program execute add caching"
-# Outputs: contents of references/program-flow.md
+# outputs contents of references/program-flow.md
 ```
 
-The skill's `SKILL.md` instructions tell the model: "Before executing, run `scripts/inject-context` with the user's prompt." Simple convention, hard to skip.
+One line in `SKILL.md`: "run `scripts/inject-context` with the user's prompt before proceeding." Simpler than a routing table, harder to skip.
 
-### Layer 2: UserPromptSubmit Hook (Claude Code)
-
-For Claude Code users, a lifecycle hook injects references **before** the model runs -- no model decision required.
-
-1. User types `/saw program execute "add caching"`
-2. Hook fires, iterates installed skills
-3. Each skill's `scripts/inject-context` runs against the prompt
-4. Matching reference content is returned as `additionalContext`
-5. Model receives references in context before it starts
-
-Deterministic. The model cannot skip or misroute.
+**Layer 2 -- Hook (Claude Code).** A `UserPromptSubmit` hook runs the same script before the model sees the prompt. No model decision. The reference is in context when the model starts. Deterministic.
 
 ## Trigger Definitions
 
