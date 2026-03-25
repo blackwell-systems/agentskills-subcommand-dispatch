@@ -47,6 +47,8 @@ triggers:
 - Multiple matches -> all matching references injected (concatenated)
 - No match -> no injection, zero overhead
 
+**Important: dispatch-time triggers only.** The Claude Code `UserPromptSubmit` hook receives the prompt *after* skill body expansion -- the full `SKILL.md` content is in the prompt, not just what the user typed. This means keyword triggers like `failure|blocked` will match against the skill's own instructions and fire on every invocation. Use anchored patterns that can't appear in the skill body (e.g. `^/saw program`, `^/saw amend`). Mid-execution references that depend on runtime state (like failure routing after agents report back) should stay convention-based -- the hook fires too early for them.
+
 ## Installation
 
 ### The injection script (any skill)
